@@ -7,6 +7,23 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
+# Load the dataset from local path
+trainPath = r"D:\Work\python\dl_clg\datasets\fashion\fashion-mnist_train.csv"
+testPath = r"D:\Work\python\dl_clg\datasets\fashion\fashion-mnist_test.csv"
+traindata = pd.read_csv(trainPath)
+testdata = pd.read_csv(testPath)
+data = pd.concat([traindata, testdata])
+
+data.head()
+
+y = data['label'].values
+x = data.drop(columns=['label']).values
+
+y = to_categorical(y) 
+x = x.reshape(-1,28,28,1)/255.0 
+
+x_train , x_test , y_train , y_test = train_test_split(x,y, test_size=.25)
+
 # 1. Load and preprocess the Fashion MNIST dataset
 (train_images, train_labels), (test_images, test_labels) = datasets.fashion_mnist.load_data()
 
