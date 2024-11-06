@@ -101,6 +101,7 @@ report = classification_report(true_classes, predicted_classes, target_names=cla
 print(report)
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Get class labels
 class_names = list(test_data.class_indices.keys())
@@ -118,8 +119,13 @@ for i in range(num_images):
     plt.subplot(1, num_images, i + 1)
     plt.imshow(images[i])
     plt.axis('off')
+   
     true_label = class_names[true_labels[i]]
     predicted_label = class_names[predicted_labels[i]]
+   
+    # Define the color based on whether the prediction was correct
+    color = "green" if true_labels[i] == predicted_labels[i] else "red"
+   
     plt.title(f"True: {true_label}\nPred: {predicted_label}", color=color)
 
 plt.show()
