@@ -1,0 +1,100 @@
+---------------1 TF,Pytorch----------------------
+import tensorflow as tf
+from tensorflow.keras import layers, models
+import numpy as np
+
+# Generate some sample data
+np.random.seed(42)
+X_train = np.random.rand(1000, 10)
+y_train = np.sum(X_train, axis=1) > 5
+
+def create_tf_model():
+   model = models.Sequential([
+    layers.Dense(64, activation='relu', input_shape=(10,)),
+    layers.Dropout(0.2),
+    layers.Dense(32, activation='relu'),
+    layers.Dense(1, activation='sigmoid')
+
+   ])
+   model.compile(optimizer='adam',
+                 loss='binary_crossentropy',
+                 metrics=['accuracy'])
+   return model
+
+tf_model = create_tf_model()
+
+tf_history = tf_model.fit(X_train, y_train,
+                         epochs=10,
+                         batch_size=32,
+                         validation_split=0.2,
+                         verbose=0)
+
+***************************************************
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import TensorDataset, DataLoader
+
+X_torch = torch.FloatTensor(X_train)
+y_torch = torch.FloatTensor(y_train)
+
+dataset = TensorDataset(X_torch, y_torch)
+
+dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+class PyTorchModel(nn.Module):
+    def __init__(self):
+        super(PyTorchModel, self).__init__()
+        self.layer1 = nn.Linear(10, 64)     #It takes 10 input features (the size of the input data) and transforms them into 64 output features (neurons in this layer).
+        self.layer2 = nn.Linear(64, 32)      #This is typically used for binary classification tasks, where the model outputs a probability score
+        self.layer3 = nn.Linear(32, 1)
+        self.relu = nn.ReLU()     #ReLU is commonly used as an activation function in neural networks because it introduces non-linearity, allowing the model to learn complex patterns.
+        self.dropout = nn.Dropout(0.2)   #keep 20% for validation
+        self.sigmoid = nn.Sigmoid()   #This creates an instance of the Sigmoid activation function, which squashes the output to a range between 0 and 1.
+
+    def forward(self, x):
+        x = self.relu(self.layer1(x))
+        x = self.dropout(x)
+        x = self.relu(self.layer2(x))
+        x = self.sigmoid(self.layer3(x))
+        return x
+
+# Initialize model, loss function, and optimizer
+torch_model = PyTorchModel()
+criterion = nn.BCELoss()
+optimizer = optim.Adam(torch_model.parameters())
+
+# Training loop for PyTorch
+def train_pytorch_model(model, dataloader, criterion, optimizer, num_epochs=10):
+    model.train()
+    for epoch in range(num_epochs):
+        running_loss = 0.0
+        for inputs, labels in dataloader:
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            loss = criterion(outputs, labels.unsqueeze(1))
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+
+# Train PyTorch model
+train_pytorch_model(torch_model, dataloader, criterion, optimizer)
+
+# Example predictions
+def make_predictions():
+    # Generate test data
+    X_test = np.random.rand(5, 10)
+
+    # TensorFlow predictions
+    tf_preds = tf_model.predict(X_test)
+
+    # PyTorch predictions
+    torch_model.eval()
+    with torch.no_grad():
+        torch_preds = torch_model(torch.FloatTensor(X_test))
+
+    return X_test, tf_preds, torch_preds.numpy()
+
+# Make and display predictions
+X_test, tf_preds, torch_preds = make_predictions()
+

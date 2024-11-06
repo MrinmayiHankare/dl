@@ -1,0 +1,146 @@
+------------5. FASHION IMAGE CLASSIFICATION----------------------
+
+import tensorflow as tf
+from tensorflow.keras import datasets, layers, models
+import matplotlib.pyplot as plt
+import numpy as np
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+
+# 1. Load and preprocess the Fashion MNIST dataset
+(train_images, train_labels), (test_images, test_labels) = datasets.fashion_mnist.load_data()
+
+# Add channel dimension and normalize pixel values
+train_images = train_images.reshape((60000, 28, 28, 1)).astype('float32') / 255.0
+test_images = test_images.reshape((10000, 28, 28, 1)).astype('float32') / 255.0
+
+# Define class names for visualization
+class_names = ['T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat',
+               'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot']
+
+# 2. Visualize some training examples
+plt.figure(figsize=(10, 10))
+for i in range(9):
+    plt.subplot(3, 3, i + 1)
+    plt.imshow(train_images[i].reshape(28, 28), cmap='gray')
+    plt.title(class_names[train_labels[i]])
+    plt.axis('off')
+plt.show()
+
+# 3. Create the CNN model
+model = models.Sequential([
+    # First Convolutional Block
+    layers.Conv2D(32, (3, 3), activation='relu', input_shape=(28, 28, 1)),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D((2, 2)),
+    layers.Dropout(0.25),
+
+    # Second Convolutional Block
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.BatchNormalization(),
+    layers.MaxPooling2D((2, 2)),
+    layers.Dropout(0.25),
+
+    # Third Convolutional Block
+    layers.Conv2D(64, (3, 3), activation='relu'),
+    layers.BatchNormalization(),
+    layers.Dropout(0.25),
+
+    # Flatten and Dense Layers
+    layers.Flatten(),
+    layers.Dense(128, activation='relu'),
+    layers.BatchNormalization(),
+    layers.Dropout(0.5),
+    layers.Dense(10, activation='softmax')
+])
+
+# Print model summary
+model.summary()
+
+# 4. Compile the model
+model.compile(optimizer='adam',
+             loss='sparse_categorical_crossentropy',
+             metrics=['accuracy'])
+
+# 5. Add callbacks
+callbacks = [
+    tf.keras.callbacks.EarlyStopping(
+        monitor='val_loss',
+        patience=5,
+        restore_best_weights=True
+    ),
+    tf.keras.callbacks.ReduceLROnPlateau(
+        monitor='val_loss',
+        factor=0.2,
+        patience=3,
+        min_lr=1e-6
+    )
+]
+
+# 6. Train the model
+history = model.fit(train_images, train_labels,
+                   batch_size=64,
+                   epochs=30,
+                   validation_split=0.2,
+                   callbacks=callbacks,
+                   verbose=1)
+
+# 7. Plot training history
+plt.figure(figsize=(12, 4))
+
+# Plot accuracy
+plt.subplot(1, 2, 1)
+plt.plot(history.history['accuracy'], label='Training Accuracy')
+plt.plot(history.history['val_accuracy'], label='Validation Accuracy')
+plt.title('Model Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+
+# Plot loss
+plt.subplot(1, 2, 2)
+plt.plot(history.history['loss'], label='Training Loss')
+plt.plot(history.history['val_loss'], label='Validation Loss')
+plt.title('Model Loss')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+
+plt.tight_layout()
+plt.show()
+
+# 8. Evaluate the model on test data
+test_loss, test_accuracy = model.evaluate(test_images, test_labels, verbose=0)
+print(f"\nTest accuracy: {test_accuracy:.4f}")
+print(f"Test loss: {test_loss:.4f}")
+
+# 9. Make predictions and create confusion matrix
+predictions = model.predict(test_images)
+pred_labels = np.argmax(predictions, axis=1)
+
+# Create and plot confusion matrix
+cm = confusion_matrix(test_labels, pred_labels)
+plt.figure(figsize=(12, 10))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+            xticklabels=class_names,
+            yticklabels=class_names)
+plt.title('Confusion Matrix')
+plt.xlabel('Predicted')
+plt.ylabel('True')
+plt.xticks(rotation=45)
+plt.yticks(rotation=45)
+plt.tight_layout()
+plt.show()
+
+# 10. Display some predictions
+plt.figure(figsize=(12, 8))
+for i in range(12):
+    plt.subplot(3, 4, i + 1)
+    plt.imshow(test_images[i].reshape(28, 28), cmap='gray')
+    predicted = class_names[pred_labels[i]]
+    actual = class_names[test_labels[i]]
+    color = 'green' if predicted == actual else 'red'
+    plt.title(f'Pred: {predicted}\nTrue: {actual}', color=color)
+    plt.axis('off')
+plt.tight_layout()
+plt.show()

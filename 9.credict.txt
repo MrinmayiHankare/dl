@@ -1,0 +1,119 @@
+-------------------9 Credit Card-------------------------------
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import keras
+from keras.datasets import mnist
+from keras import layers, regularizers
+from keras import Model
+from keras.optimizers import Adam
+from keras.layers import Dense, MaxPooling2D, GlobalAveragePooling2D
+
+import tensorflow as tf
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Dense, Dropout
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import confusion_matrix, accuracy_score,precision_score,recall_score
+from sklearn.model_selection import train_test_split
+
+
+df= pd.read_csv('/content/creditcard.csv')
+
+print('any null values',df.isnull().values.any())
+print('labels',len(df['Class'].unique()))
+print('label values',df.Class.unique())
+
+count_classes=pd.value_counts(df['Class'], sort=True)
+count_classes.plot(kind='bar',rot=0)
+plt.show()
+
+normal_data=df[df['Class']==0]
+fraud_data=df[df['Class']==1]
+print('normal data=',normal_data.shape)
+print('fraud_data=',fraud_data.shape)
+
+bins= np.linspace(200,2500,100)
+plt.hist(normal_data['Amount'], bins=bins,color='g',alpha=1,density='True',label='Normal')
+plt.hist(fraud_data['Amount'],bins=bins,color='r',alpha=0.5,density='True',label='fraud')
+plt.show()
+
+sc= StandardScaler()
+df['Amount']=sc.fit_transform(df['Amount'].values.reshape(-1,1))
+df['Time']=sc.fit_transform(df['Time'].values.reshape(-1,1))
+
+raw=df.values
+labels= raw[:, -1]
+data= raw[:, :-1]
+
+train_data,test_data,train_labels,test_labels=train_test_split(data,labels,test_size=0.2, random_state=2021)
+
+train_labels=train_labels.astype(bool)
+test_labels=test_labels.astype(bool)
+
+min_val=tf.reduce_min(train_data)
+max_val=tf.reduce_max(train_data)
+train_data=(train_data-min_val)/(max_val-min_val)
+test_data=(test_data-min_val)/(max_val-min_val)
+
+normal_train_data= train_data[~train_labels]
+fraud_train_data= train_data[train_labels]
+
+input_dim= normal_train_data.shape[1]
+input_layer= tf.keras.layers.Input(shape=(input_dim,))
+
+encoder=tf.keras.layers.Dense(7,activation='tanh')(input_layer)
+encoder=tf.keras.layers.Dropout(0.2)(encoder)
+encoder=tf.keras.layers.Dense(7,activation='relu')(encoder)
+encoder=tf.keras.layers.Dense(4,activation=tf.nn.leaky_relu)(encoder)
+
+decoder=tf.keras.layers.Dense(7,activation='relu')(encoder)
+decoder=tf.keras.layers.Dropout(0.2)(decoder)
+decoder=tf.keras.layers.Dense(input_dim,activation='tanh')(decoder)
+
+autoencoder= tf.keras.models.Model(inputs=input_layer,outputs=decoder)
+
+autoencoder.compile(optimizer='adam',metrics=['accuracy'],loss='mae')
+
+history= autoencoder.fit(normal_train_data,normal_train_data,
+                         validation_data=(test_data,test_data),
+                         epochs=10,
+                         batch_size=64,
+                         shuffle=True
+                         ).history
+
+test_x_prediction = autoencoder.predict(test_data)
+test_loss = tf.keras.losses.mse(test_data, test_x_prediction)
+error_df = pd.DataFrame({'Reconstruction_error': test_loss, 'True_class': test_labels})
+
+threshold_fixed = np.percentile(error_df[error_df['True_class'] == 0].Reconstruction_error, 95)
+
+# Error threshold plot
+#threshold_fixed = 0.003
+#groups = error_df.groupby('True_class')
+#fig, ax = plt.subplots()
+#for name, group in groups:
+    #ax.plot(group.index, group.Reconstruction_error, marker='o', ms=3.5, linestyle='',
+            #label="Fraud" if name == 1 else "Normal")
+#ax.hlines(threshold_fixed, ax.get_xlim()[0], ax.get_xlim()[1], colors="r", zorder=100, label='Threshold')
+#ax.legend()
+#plt.title("Reconstruction error for normal and fraud data points")
+#plt.ylabel("Reconstruction error")
+#plt.xlabel("Data point index")
+#plt.show()
+
+pred_y = [1 if e > threshold_fixed else 0 for e in error_df.Reconstruction_error.values]
+conf_matrix = confusion_matrix(error_df['True_class'], pred_y)
+sns.heatmap(conf_matrix, cmap='Blues', annot=True, fmt='d')
+plt.title('Confusion matrix')
+plt.ylabel('True class')
+plt.xlabel('Predicted class')
+plt.show()
+
+# Metrics
+print("Accuracy:", accuracy_score(error_df['True_class'], pred_y))
+print("Recall:", recall_score(error_df['True_class'], pred_y))
+print("Precision:", precision_score(error_df['True_class'], pred_y))

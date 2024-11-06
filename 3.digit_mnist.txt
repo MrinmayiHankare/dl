@@ -1,0 +1,76 @@
+---------------3 MNIST DIGIT---------------------
+
+import tensorflow as tf
+from tensorflow import keras
+import matplotlib.pyplot as plt
+import random
+
+from sklearn.model_selection import  train_test_split
+
+#b load training and testing data(MNIST)
+mnist = tf.keras.datasets.mnist #importing MNIST Dataset
+
+(x_train,y_train),(x_test,y_test)=mnist.load_data()  #splitting into training and testing
+#x_train = x_train / 255
+#x_test = x_test / 255
+
+x_train = x_train.astype('float32') / 255.0
+x_test = x_test.astype('float32') / 255.0
+
+# Check the shapes of the loaded data
+print("x_train shape:", x_train.shape)  # Should be (60000, 28, 28)
+print("y_train shape:", y_train.shape)  # Should be (60000,)
+print("x_test shape:", x_test.shape)    # Should be (10000, 28, 28)
+print("y_test shape:", y_test.shape)    # Should be (10000,)
+
+#c Define network architechture using keras
+
+model =keras.Sequential([
+    keras.layers.Flatten(input_shape=(28, 28)),
+    keras.layers.Dense(128, activation='relu'), #128 neurons i.e. hidden layer
+    keras.layers.Dense(10,activation='softmax') #10 neurons i.e. output layer
+])
+model.summary()
+
+# d. Train model using SGD
+# Compile the model
+model.compile(optimizer='sgd',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
+
+# Train the model
+history = model.fit(x_train, y_train, validation_data=(x_test, y_test), epochs=10)
+
+#e. evaluate the network
+test_loss,test_acc=model.evaluate(x_test,y_test)
+print('loss=%.3f'%test_loss)
+print('accuracy=%.3f'%test_acc)
+
+n=random.randint(0,9999)
+plt.imshow(x_test[n])
+plt.show()
+predicted_value=model.predict(x_test)
+plt.imshow(x_test[n])
+plt.show()
+
+print('predicted value:',predicted_value[n])
+
+#f. plot training loss and accuracy
+
+#accuracy
+plt.plot(history.history['accuracy'])
+plt.plot(history.history['val_accuracy'])
+plt.title('model accuracy')
+plt.ylabel('accuracy')
+plt.xlabel('epoch')
+plt.legend(['Train','Validation'],loc='upper right')
+plt.show()
+
+#loss
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('model loss')
+plt.ylabel('loss')
+plt.xlabel('epoch')
+plt.legend(['Train','validation'],loc='upper left')
+plt.show()
