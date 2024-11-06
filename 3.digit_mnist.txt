@@ -8,7 +8,16 @@ import random
 from sklearn.model_selection import  train_test_split
 
 #b load training and testing data(MNIST)
-mnist = tf.keras.datasets.mnist #importing MNIST Dataset
+#mnist = tf.keras.datasets.mnist #importing MNIST Dataset
+
+train = pd.read_csv("D:\Work\python\dl_clg\datasets\mnistdigit\mnist_784_csv.csv")
+train.head()
+
+# train.head()
+y = train['class'].values
+x = train.drop(columns=['class']).values
+
+x_train, x_test , y_train , y_test = train_test_split(x,y,test_size=.3)
 
 (x_train,y_train),(x_test,y_test)=mnist.load_data()  #splitting into training and testing
 #x_train = x_train / 255
