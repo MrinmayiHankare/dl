@@ -8,6 +8,29 @@ from tensorflow.keras.utils import to_categorical
 from tensorflow.keras.datasets import cifar10
 import random
 
+# Specify dataset path
+dataset_path = "C:/Users/vaidi/anaconda3/Deep Learning Practice/cifar10_dataset"  # Change this to your CIFAR-10 dataset path
+
+# Load the CIFAR-10 dataset
+x, y = load_cifar10_dataset(dataset_path)
+
+# Load CIFAR-10 images from directories
+def load_cifar10_dataset(dataset_path, img_size=(32, 32)):
+    images = []
+    labels = []
+    for label in range(10):  # Assuming folders are named 0, 1, ..., 9
+        folder_path = os.path.join(dataset_path, str(label))
+        for img_filename in os.listdir(folder_path):
+            img_path = os.path.join(folder_path, img_filename)
+            img = load_img(img_path, target_size=img_size)  # Resize to 32x32
+            img_array = img_to_array(img) / 255.0  # Normalize
+            images.append(img_array)
+            labels.append(label)
+    return np.array(images), np.array(labels)
+
+# Split the dataset
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=42)
+
 # Load CIFAR-10 dataset directly
 (x_train, y_train), (x_test, y_test) = cifar10.load_data()
 
